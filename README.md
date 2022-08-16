@@ -12,6 +12,6 @@ i18n Manager || 管理远程多语言包
 
 ## 运行
 
-  step 1: 下载 index.php
-  step 2: php -S localhost:8007
-  step other: 加入到能解析php服务的项目中即可
+    step 1: 下载 index.php
+    step 2: php -S localhost:8007
+    step other: 加入到能解析php服务的项目中即可
