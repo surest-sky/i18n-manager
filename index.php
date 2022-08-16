@@ -636,7 +636,7 @@ $keys = json_encode(array_values($keys))
                 console.log('startDelopy', this.checkList)
 
                 const maps = {
-                    'staging': 'https://teacherrecord.coding.net/api/cd/webhooks/webhook/2698b5f8-968e-4f81-92e8-b67197c64323',
+                    'staging': '*',
                     'master': ''
                 }
 
