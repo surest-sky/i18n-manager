@@ -35,8 +35,10 @@ $keys = json_encode(array_values($keys))
     <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
     <script src="https://unpkg.com/element-ui/lib/index.js"></script>
     <script src="https://unpkg.com/dayjs@1.8.21/dayjs.min.js"></script>
-    <script src="//cdn.quilljs.com/1.3.6/quill.js"></script>
-    <link rel="stylesheet" href="//cdn.quilljs.com/1.3.6/quill.bubble.css">
+    <script src="https://unpkg.com/@wangeditor/editor@latest/dist/index.js"></script>
+    <link href="https://unpkg.com/@wangeditor/editor@latest/dist/css/style.css" rel="stylesheet">
+    <!-- <script src="//cdn.quilljs.com/1.3.6/quill.js"></script>
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.3.6/quill.bubble.css"> -->
     <style>
         html {
             scroll-behavior: smooth;
@@ -263,8 +265,8 @@ $keys = json_encode(array_values($keys))
                 </div>
             </div>
             <el-col :span="6">
-                <div class="menu scrollbar">
-                    <div :class="`item ${translates[key]['type'] == 'warning' ? 'danger' : ''} ${key == translate.key ? 'active' : ''}`"
+                <div class="menu scrollbar" >
+                    <div :class="`item ${translates[key]['type'] == 'warning' ? 'danger' : ''} ${key == translate.key ? 'active' : ''} ${key}`"
                         v-for="key in filterKeys" :key="key" @click="select(key)">
                         <span>- {{ key }}</span>
                         <span>
@@ -372,13 +374,21 @@ $keys = json_encode(array_values($keys))
         },
         methods: {
             loadEditor() {
+                const { createEditor, createToolbar } = window.wangEditor
                 const editorsForDom = document.querySelectorAll(".editor")
                 const editors = {}
-                editorsForDom.forEach(function (editor) {
-                    var quill = new Quill(editor, {
-                        theme: 'bubble'
-                    });
-                    editors[editor.getAttribute('id')] = quill;
+                editorsForDom.forEach(function (editorDom) {
+                    const editorConfig = {
+                        placeholder: '请输入...'
+                    }
+                    const id = editorDom.getAttribute("id")
+                    const editor = createEditor({
+                        selector: `#${id}`,
+                        html: '',
+                        config: editorConfig,
+                        mode: 'default', // or 'simple'
+                    })
+                    editors[id] = Object.seal(editor);
                 })
                 this.editors = editors
             },
@@ -420,9 +430,10 @@ $keys = json_encode(array_values($keys))
                     this.translates = translates
                     this.filterKeys = this.i18nKeys
                     this.loading = false
+
+                    this.loadEditor()
                     this.select(this.i18nKeys[0])
                 })
-                this.loadEditor()
             },
 
             select(i18nKey) {
@@ -430,7 +441,7 @@ $keys = json_encode(array_values($keys))
                 this.translate.key = i18nKey
 
                 this.allows.map(key => {
-                    this.setContents(`#${key}`, this.translate[key])
+                    this.setContents(key, this.translate[key])
                 })
             },
 
@@ -510,24 +521,25 @@ $keys = json_encode(array_values($keys))
                 return str.replace(/(<\/p>*$)/g,"");
             },
 
-            getContents(id) {
-                let html = document.querySelector(id).children[0].innerHTML
+            getContents(key) {
+                let html = this.editors[key].getHtml();
                 html = this.ltrim(html)
                 html = this.rtrim(html)
                 return html
             },
 
-            setContents(id, content) {
-                document.querySelector(id).children[0].innerHTML = content
+            setContents(key, content) {
+                this.editors[key].setHtml(content ? content : '');
             },
 
             save() {
                 this.allows.map(key => {
-                    const html = this.getContents(`#${key}`)
+                    const html = this.getContents(key)
                     this.translate[key] = html
                 })
                 
                 this.translates[this.translate.key] = this.translate
+                console.log(this.translates)
                 this.complete()
             },
 
@@ -629,6 +641,7 @@ $keys = json_encode(array_values($keys))
                         message: '删除成功',
                         type: 'success'
                     });
+                    this.complete()
                 })
             },
 
@@ -636,7 +649,7 @@ $keys = json_encode(array_values($keys))
                 console.log('startDelopy', this.checkList)
 
                 const maps = {
-                    'staging': '*',
+                    'staging': 'https://teacherrecord.coding.net/api/cd/webhooks/webhook/2698b5f8-968e-4f81-92e8-b67197c64323',
                     'master': ''
                 }
 
@@ -662,11 +675,47 @@ $keys = json_encode(array_values($keys))
                     }
                 })
                 this.showDelopyVisible = false;
-            }
+            },
+
+            keyEvent(keyCode) {
+                if(![38, 40].includes(keyCode)) {
+                    return
+                }
+                const curNode = document.activeElement.nodeName
+                const len = this.filterKeys.length;
+                const curIndex = this.filterKeys.findIndex(item => item == this.translate.key)
+                let nIndex = curIndex
+                // console.log('curIndex', curIndex)
+                if(keyCode === 38) {
+                    nIndex = curIndex - 1
+                    if(nIndex < 0) {
+                        nIndex = len - 1
+                    }
+                }
+
+                if(keyCode === 40) {
+                    nIndex = curIndex + 1
+                    console.log('nIndex', nIndex)
+                    if(nIndex > len || nIndex == 0) {
+                        nIndex = 0
+                    }
+                }
+
+                const key = this.filterKeys[nIndex]
+                this.select(key)
+                const top = document.querySelector(`.${key}`).offsetTop
+                document.querySelector('.menu').scrollTop = top > 600 ?  top - 100 : top
+            },
 
         },
         mounted() {
+            document.title = "i18n Manager"
+            const that = this
             this.lodaI18n()
+
+            window.addEventListener('keyup', ({keyCode}) => {
+                that.keyEvent(keyCode)
+            })
         }
     })
 </script>
